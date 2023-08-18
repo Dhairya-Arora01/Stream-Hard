@@ -42,6 +42,7 @@
             const peerConnection = new RTCPeerConnection(iceConfig)
             stream.value.getTracks().forEach(track => {
                 peerConnection.addTrack(track, stream.value)
+                console.log("added")
             })
 
             const offer = await peerConnection.createOffer()
@@ -66,8 +67,8 @@
             })
         })
 
-        const msg = await result.json()
-        console.log("message", msg)
+        const remoteSdp = await result.json()
+        await peerConnection.setRemoteDescription(remoteSdp)
 
     }
 

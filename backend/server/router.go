@@ -57,10 +57,19 @@ func getFeeder(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("SPD received")
 
-	response := []byte(`{"message": "recieved sdp"}`)
+	// var localsdp *webrtc.SessionDescription
 
-	_, err = w.Write(response)
+	localsdp := initialSetup(sdp.SessionInformation)
+
+	responseToSend, err := json.Marshal(localsdp)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = w.Write(responseToSend)
 	responseErrorHandling(err, "Some Exception occured")
+	log.Println("SDP sent")
+	consumeMedia()
 }
 
 func responseErrorHandling(err error, msg string) {

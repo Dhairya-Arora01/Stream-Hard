@@ -6,7 +6,9 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-func initialSetup() {
+var peer *webrtc.PeerConnection
+
+func initialSetup(sdp webrtc.SessionDescription) *webrtc.SessionDescription {
 
 	mediaEngine := webrtc.MediaEngine{}
 
@@ -36,12 +38,35 @@ func initialSetup() {
 		},
 	}
 
-	peerConnection, err := api.NewPeerConnection(config)
+	peer, err = api.NewPeerConnection(config)
 
 	if err != nil {
 		panic(err)
 	}
 
-	log.Println(peerConnection)
+	err = peer.SetRemoteDescription(sdp)
+	if err != nil {
+		log.Fatal("this is it")
+		panic(err)
+	}
+
+	localsdp, err := peer.CreateAnswer(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	err = peer.SetLocalDescription(localsdp)
+	if err != nil {
+		panic(err)
+	}
+	consumeMedia()
+	return peer.LocalDescription()
+}
+
+func consumeMedia() {
+
+	peer.OnTrack(func(track *webrtc.TrackRemote, reciever *webrtc.RTPReceiver) {
+		log.Println("SSRC: ", track.SSRC())
+	})
 
 }
