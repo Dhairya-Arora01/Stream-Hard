@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/pion/webrtc/v3"
 )
 
-// Registers route and starts the server at specified port
+// Registers route and starts the server at specified port.
 func CreateRoutes(port string) {
 
 	router := mux.NewRouter()
@@ -17,7 +19,11 @@ func CreateRoutes(port string) {
 
 	http.Handle("/", router)
 	log.Printf("Starting Server at localhost:8000")
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(":8000", handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "OPTIONS", "DELETE"}),
+		handlers.AllowedHeaders([]string{"Content-Type"}),
+	)(router))
 
 }
 
@@ -30,23 +36,26 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type Sdp struct {
-	Name string `json:"name"`
-	Sdp  string `json:"sdp"`
+// SessionDescription as received from the frontend
+type SessionInfo struct {
+	SessionInformation webrtc.SessionDescription `json:"sdp"`
 }
 
 func getFeeder(w http.ResponseWriter, r *http.Request) {
 
+	log.Printf("%s-%s", r.Method, r.RequestURI)
+
 	w.Header().Set("Content-Type", "application/json")
 
-	var sessionDescription Sdp
-	err := json.NewDecoder(r.Body).Decode(&sessionDescription)
+	var sdp SessionInfo
+
+	err := json.NewDecoder(r.Body).Decode(&sdp)
 
 	if err != nil {
 		log.Fatalf("Unable to decode the request body: %s\n", err)
 	}
 
-	log.Printf("Session Description--name: %s, sdp: %s\n", sessionDescription.Name, sessionDescription.Sdp)
+	log.Printf("SPD received")
 
 	response := []byte(`{"message": "recieved sdp"}`)
 

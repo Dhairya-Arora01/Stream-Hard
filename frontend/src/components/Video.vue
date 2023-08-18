@@ -4,7 +4,6 @@
     const stream = ref(null)
     const localStream = ref(null)
 
-
     const streamConfig = {
         video: {
             width: { min: 178, ideal: 1280, max: 1920 },
@@ -47,10 +46,28 @@
 
             const offer = await peerConnection.createOffer()
             await peerConnection.setLocalDescription(offer)
-            console.log(offer)
+            // console.log('local Description',peerConnection.localDescription)
+            sendOfferToServer(peerConnection)
         } catch (error) {
             console.error("Ice fault",error)
         }
+
+    }
+
+    async function sendOfferToServer(peerConnection) {
+
+        const result = await fetch("http://localhost:8000/feed", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'sdp': peerConnection.localDescription,
+            })
+        })
+
+        const msg = await result.json()
+        console.log("message", msg)
 
     }
 
