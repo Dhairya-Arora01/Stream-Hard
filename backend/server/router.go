@@ -39,71 +39,6 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// SessionDescription as received from the frontend
-type SessionInfo struct {
-	SessionInformation webrtc.SessionDescription `json:"sdp"`
-}
-
-type SendSdp struct {
-	Sdp webrtc.SessionDescription `json:"sdp"`
-}
-
-// func broadcastHandler(w http.ResponseWriter, r *http.Request) {
-// 	api := initialSetup()
-// 	Peer, err := api.NewPeerConnection(webrtc.Configuration{
-// 		ICEServers: []webrtc.ICEServer{
-// 			{
-// 				URLs: []string{
-// 					"stun:stun1.l.google.com:19302",
-// 				},
-// 			},
-// 		},
-// 		ICECandidatePoolSize: 10,
-// 	})
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
-// 		log.Println(tr.SSRC())
-// 	})
-
-// 	var sessionDescription SessionInfo
-// 	json.NewDecoder(r.Body).Decode(&sessionDescription)
-// 	err = Peer.SetRemoteDescription(sessionDescription.SessionInformation)
-// 	if err != nil {
-// 		log.Println("Error while setting remote description", err)
-// 	}
-// 	log.Println("Remote Description set sucessfully")
-
-// 	answer, err := Peer.CreateAnswer(nil)
-// 	if err != nil {
-// 		log.Println("Error while creating answer", err)
-// 	}
-// 	Peer.SetLocalDescription(answer)
-// 	log.Println("Local Description set sucessfully")
-
-// 	sdpToSend, err := json.Marshal(SendSdp{
-// 		Sdp: answer,
-// 	})
-
-// 	if err != nil {
-// 		log.Println("Error while Marshalling", err)
-// 	}
-// 	_, err = w.Write(sdpToSend)
-// 	if err != nil {
-// 		log.Println("Some err occured", err)
-// 	}
-
-// 	go func() {
-
-// 		for {
-// 			log.Println(Peer.ConnectionState(), Peer.ICEConnectionState(), Peer.ICEGatheringState())
-// 			time.Sleep(5 * time.Second)
-// 		}
-// 	}()
-// }
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -167,6 +102,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch {
+		// if the message is an offer set it as remote description and send the answer.
 		case json.Unmarshal(p, &offer) == nil && offer.SDP != "":
 			if err := Peer.SetRemoteDescription(offer); err != nil {
 				panic(err)
@@ -181,14 +117,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 
-			// outbound, err := json.Marshal(answer)
-			// if err != nil {
-			// 	panic(err)
-			// }
-
 			if err = conn.WriteJSON(answer); err != nil {
 				panic(err)
 			}
+		// if the message is an ICECandidate, add it.
 		case json.Unmarshal(p, &candidate) == nil && candidate.ToJSON().Candidate != "":
 			if err = Peer.AddICECandidate(candidate.ToJSON()); err != nil {
 				panic(err)
@@ -198,44 +130,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
-
-// func ws(w http.ResponseWriter, r *http.Request) {
-// 	conn, err := upgrader.Upgrade(w, r, nil)
-// 	if err != nil {
-// 		log.Print("upgrade failed: ", err)
-// 		return
-// 	}
-// 	defer conn.Close()
-
-// 	var IceCandidateRecieved webrtc.ICECandidateInit
-
-// 	for {
-// 		_, b, err := conn.ReadMessage()
-
-// 		if err != nil {
-// 			log.Println(err)
-// 		}
-
-// 		err = json.Unmarshal(b, &IceCandidateRecieved)
-// 		if err != nil {
-// 			log.Println("JSON unmarshal err", err)
-// 		}
-
-// 		err = Peer.AddICECandidate(IceCandidateRecieved)
-// 		if err != nil {
-// 			log.Println("Error adding Ice candidate", err)
-// 		}
-
-// 		Peer.OnICECandidate(func(i *webrtc.ICECandidate) {
-// 			if i != nil {
-// 				err = conn.WriteJSON(i.ToJSON())
-// 				if err != nil {
-// 					log.Println("Error while sending candidate", err)
-// 				}
-// 			}
-// 		})
-// 	}
-// }
 
 func responseErrorHandling(err error, msg string) {
 	if err != nil {

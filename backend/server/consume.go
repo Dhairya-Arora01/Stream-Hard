@@ -4,6 +4,7 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+// initialSetup() returns a pointer to an instance of webrtc's API.
 func initialSetup() *webrtc.API {
 
 	mediaEngine := webrtc.MediaEngine{}
