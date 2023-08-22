@@ -2,84 +2,54 @@
     import { ref, onMounted } from 'vue';
 
     const stream = ref(null)
-    const localStream = ref(null)
 
-    const streamConfig = {
-        video: {
-            width: { min: 178, ideal: 1280, max: 1920 },
-            height: { min: 100, ideal: 720, max: 1080 },
-            facingMode: 'user'
-        },
-        audio: true
-    }
-
-    const localStreamConfig = {
-        video: {
-            width: { min: 1024, ideal: 1280, max: 1920 },
-            height: { min: 576, ideal: 720, max: 1080 },
-            facingMode: 'user'
-        }
-    }
-
-    // stun server
-    const iceConfig = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
-
-
-    onMounted(async() => {
-
+    async function startStream(){
         try {
-            stream.value = await navigator.mediaDevices.getUserMedia(streamConfig)
-            localStream.value = await navigator.mediaDevices.getUserMedia(localStreamConfig)
+            stream.value = await navigator.mediaDevices.getUserMedia({ video:true })
         } catch (error) {
             console.error("Webcam not working", error)
         }
 
-    })
+        const socket = new WebSocket("ws://localhost:8000/ws")
+        const peer = new RTCPeerConnection({
+            iceServers: [
+                {
+                    urls: ["stun:stun1.l.google.com:19302"]
+                },
+            ],
+        })
+        stream.value.getTracks().forEach(track => peer.addTrack(track, stream.value));
 
-    async function iceServer() {
+        socket.onmessage = e =>{
+            let msg = JSON.parse(e.data)
+            if (!msg){
+                return console.log("failed to parse msg")
+            }
 
-        try {
-            const peerConnection = new RTCPeerConnection(iceConfig)
-            stream.value.getTracks().forEach(track => {
-                peerConnection.addTrack(track, stream.value)
-                console.log("added")
-            })
-
-            const offer = await peerConnection.createOffer()
-            await peerConnection.setLocalDescription(offer)
-            // console.log('local Description',peerConnection.localDescription)
-            sendOfferToServer(peerConnection)
-        } catch (error) {
-            console.error("Ice fault",error)
+            if (msg.candidate) {
+                peer.addIceCandidate(msg)
+            } else if (msg.type){
+                peer.setRemoteDescription(msg)
+            }
         }
 
-    }
-
-    async function sendOfferToServer(peerConnection) {
-
-        const result = await fetch("http://localhost:8000/feed", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                'sdp': peerConnection.localDescription,
+        socket.onopen = ()=>{
+            peer.createOffer().then(offer => {
+                peer.setLocalDescription(offer)
+                socket.send(JSON.stringify(offer))
             })
-        })
-
-        const remoteSdp = await result.json()
-        await peerConnection.setRemoteDescription(remoteSdp)
-
+        }
+        
     }
 
 </script>
 
 <template>
     <div id="video">
-        <video :srcObject="localStream" id="videoPlayer" autoplay></video>
+        <video :srcObject="stream" id="videoPlayer" autoplay></video>
     </div>
     <div id="button">
-        <button v-on:click="iceServer">Start</button>
+        <button  v-on:click="startStream">Start</button>
     </div>
 </template>
 
