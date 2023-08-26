@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/at-wat/ebml-go v0.17.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect

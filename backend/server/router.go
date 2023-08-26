@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v3/pkg/media/ivfwriter"
 )
 
 // Registers route and starts the server at specified port.
@@ -67,9 +70,40 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	if _, err = Peer.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
+		panic(err)
+	}
+
 	Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
-		log.Println("SSRC", tr.SSRC())
-		log.Println(tr.Codec().ClockRate)
+
+		ffmpegIn := ffmpegSetup()
+		ivfwriter, err := ivfwriter.NewWith(ffmpegIn)
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			ticker := time.NewTicker(time.Second * 3)
+			for range ticker.C {
+				rtcpSendErr := Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
+				if rtcpSendErr != nil {
+					fmt.Println(rtcpSendErr)
+				}
+			}
+		}()
+
+		log.Printf("Track has started stream %s, id: %s, rid: %s, kind: %s", tr.StreamID(), tr.ID(), tr.RID(), tr.Kind())
+		if tr.Kind().String() == "video" {
+			for {
+				rtpPacket, _, err := tr.ReadRTP()
+				if err != nil {
+					panic(err)
+				}
+				if err := ivfwriter.WriteRTP(rtpPacket); err != nil {
+					panic(err)
+				}
+			}
+		}
 	})
 
 	Peer.OnICECandidate(func(c *webrtc.ICECandidate) {
