@@ -83,7 +83,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 
 		go func() {
-			ticker := time.NewTicker(time.Second * 3)
+			ticker := time.NewTicker(time.Second * 1)
 			for range ticker.C {
 				rtcpSendErr := Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
 				if rtcpSendErr != nil {
