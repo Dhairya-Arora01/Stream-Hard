@@ -20,7 +20,6 @@ func CreateRoutes(port string) {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/hello", sayHello).Methods("GET")
-	// router.HandleFunc("/broadcast", broadcastHandler).Methods("POST")
 	router.HandleFunc("/ws", ws)
 
 	http.Handle("/", router)
@@ -70,9 +69,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if _, err = Peer.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
-		panic(err)
-	}
 
 	Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
 
@@ -81,6 +77,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+		// oggwriter, err := oggwriter.NewWith(ffmpegIn, 44100, 2)
+		// if err != nil {
+		// 	panic(err)
+		// }
 
 		go func() {
 			ticker := time.NewTicker(time.Second * 1)
@@ -99,11 +99,29 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					panic(err)
 				}
-				if err := ivfwriter.WriteRTP(rtpPacket); err != nil {
-					panic(err)
+				if rtpPacket.PayloadType == 96 {
+					if err := ivfwriter.WriteRTP(rtpPacket); err != nil {
+						panic(err)
+					}
 				}
+				// if rtpPacket.PayloadType == 111 {
+				// 	if err := oggwriter.WriteRTP(rtpPacket); err != nil {
+				// 		panic(err)
+				// 	}
+				// }
 			}
 		}
+		// } else {
+		// 	for {
+		// 		rtpPacket, _, err := tr.ReadRTP()
+		// 		if err != nil {
+		// 			panic(err)
+		// 		}
+		// 		if err := oggwriter.WriteRTP(rtpPacket); err != nil {
+		// 			panic(err)
+		// 		}
+		// 	}
+		// }
 	})
 
 	Peer.OnICECandidate(func(c *webrtc.ICECandidate) {

@@ -2,10 +2,25 @@
     import { ref, onMounted } from 'vue';
 
     const stream = ref(null)
+    const localStream = ref(null)
+    const combinedStream = ref(null)
+    const name = ref(null)
 
     async function startStream(){
         try {
-            stream.value = await navigator.mediaDevices.getUserMedia({ video:true })
+            stream.value = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
+            const canvas = document.createElement('canvas');
+            canvas.width = localStream.value.getVideoTracks()[0].getSettings().width; // Adjust based on your video size
+            canvas.height = localStream.value.getVideoTracks()[0].getSettings().height; // Adjust based on your video size
+            const ctx = canvas.getContext('2d');
+            window.setInterval(()=>{
+                ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
+                ctx.font = '24px Arial'
+                ctx.fillStyle = 'black'
+                ctx.fillText(name.value, 10, 30)
+            })
+            combinedStream.value = canvas.captureStream();
         } catch (error) {
             console.error("Webcam not working", error)
         }
@@ -18,7 +33,7 @@
                 },
             ],
         })
-        stream.value.getTracks().forEach(track => peer.addTrack(track, stream.value));
+        combinedStream.value.getTracks().forEach(track => peer.addTrack(track, combinedStream.value));
 
         socket.onmessage = e =>{
             let msg = JSON.parse(e.data)
@@ -46,10 +61,17 @@
 
 <template>
     <div id="video">
-        <video :srcObject="stream" id="videoPlayer" autoplay></video>
+        <video :srcObject="localStream" id="videoPlayer" autoplay></video>
     </div>
     <div id="button">
         <button  v-on:click="startStream">Start</button>
+    </div>
+    <div id="getname">
+        <input type="text" v-model="name">
+    </div>
+    <div>
+        <p>canvas</p>
+        <video :srcObject="combinedStream" autoplay></video>
     </div>
 </template>
 

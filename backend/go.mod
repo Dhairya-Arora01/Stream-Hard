@@ -9,7 +9,6 @@ require (
 )
 
 require (
-	github.com/at-wat/ebml-go v0.17.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -21,7 +20,7 @@ require (
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/mdns v0.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/rtcp v1.2.10 // indirect
+	github.com/pion/rtcp v1.2.10
 	github.com/pion/rtp v1.8.1 // indirect
 	github.com/pion/sctp v1.8.7 // indirect
 	github.com/pion/sdp/v3 v3.0.6 // indirect
