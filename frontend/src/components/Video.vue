@@ -4,21 +4,29 @@
     const stream = ref(null)
     const localStream = ref(null)
     const combinedStream = ref(null)
-    const name = ref(null)
+    const name = ref("")
+    const overlay = ref("one")
+    const color = ref("#220391")
+    const textColor = ref("#f3f2f5")
 
     async function startStream(){
         try {
             stream.value = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
             const canvas = document.createElement('canvas');
-            canvas.width = localStream.value.getVideoTracks()[0].getSettings().width; // Adjust based on your video size
-            canvas.height = localStream.value.getVideoTracks()[0].getSettings().height; // Adjust based on your video size
+            canvas.width = localStream.value.getVideoTracks()[0].getSettings().width;
+            canvas.height = localStream.value.getVideoTracks()[0].getSettings().height;
             const ctx = canvas.getContext('2d');
             window.setInterval(()=>{
                 ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
+                if (overlay.value == "two"){
+                    ctx.fillStyle = color.value
+                    ctx.fillRect(0, canvas.height-50, canvas.width, 50)
+                }
                 ctx.font = '24px Arial'
-                ctx.fillStyle = 'black'
-                ctx.fillText(name.value, 10, 30)
+                ctx.fillStyle = textColor.value
+                const textWidth = ctx.measureText(name.value)
+                ctx.fillText(name.value, (canvas.width-textWidth.width)/2, canvas.height-20)
             })
             combinedStream.value = canvas.captureStream();
         } catch (error) {
@@ -63,30 +71,34 @@
     <div id="video">
         <video :srcObject="localStream" id="videoPlayer" autoplay></video>
     </div>
+    <div id="canvas" v-if="combinedStream !== null">
+        <video :srcObject="combinedStream" autoplay></video>
+    </div>
     <div id="button">
         <button  v-on:click="startStream">Start</button>
     </div>
     <div id="getname">
-        <input type="text" v-model="name">
+        <label for="name">Text on Overlay:</label>
+        <input type="text" id="name" v-model="name">
     </div>
-    <div>
-        <p>canvas</p>
-        <video :srcObject="combinedStream" autoplay></video>
+    <div id="options">
+        <input type="radio" id="one" name="overlay" value="one" v-model="overlay">
+        <label for="one">No Overlay</label>
+        <input type="radio" id="two" name="overlay" value="two" v-model="overlay">
+        <label for="two">Overlay</label>
+    </div>
+    <div id="color" v-if="overlay==='two'">
+        <input type="color" id="color" v-model="color">
+        <label for="color">Overlay Color</label>
+        <input type="color" id="textColor" v-model="textColor">
+        <label for="textColor">Text Color</label>
     </div>
 </template>
 
 <style>
 
 div#video {
-
-    width: 600px;
-    height: 400px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: blue;
-
+    display: none;
 }
 
 #videoPlayer {
