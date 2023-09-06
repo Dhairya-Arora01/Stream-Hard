@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -70,16 +71,26 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
+	var ffmpegIn io.WriteCloser
+	var ivfWriter *ivfwriter.IVFWriter
+	// var oggWriter *oggwriter.OggWriter
+
 	Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
 
-		ffmpegIn := ffmpegSetup()
-		ivfwriter, err := ivfwriter.NewWith(ffmpegIn)
-		if err != nil {
-			panic(err)
+		if ffmpegIn == nil {
+			ffmpegIn = ffmpegSetup()
 		}
-		// oggwriter, err := oggwriter.NewWith(ffmpegIn, 44100, 2)
-		// if err != nil {
-		// 	panic(err)
+		if ivfWriter == nil {
+			ivfWriter, err = ivfwriter.NewWith(ffmpegIn)
+			if err != nil {
+				panic(err)
+			}
+		}
+		// if oggWriter == nil {
+		// 	oggWriter, err = oggwriter.NewWith(ffmpegIn, 44100, 2)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 		// }
 
 		go func() {
@@ -100,28 +111,17 @@ func ws(w http.ResponseWriter, r *http.Request) {
 					panic(err)
 				}
 				if rtpPacket.PayloadType == 96 {
-					if err := ivfwriter.WriteRTP(rtpPacket); err != nil {
+					if err := ivfWriter.WriteRTP(rtpPacket); err != nil {
 						panic(err)
 					}
 				}
 				// if rtpPacket.PayloadType == 111 {
-				// 	if err := oggwriter.WriteRTP(rtpPacket); err != nil {
+				// 	if err := oggWriter.WriteRTP(rtpPacket); err != nil {
 				// 		panic(err)
 				// 	}
 				// }
 			}
 		}
-		// } else {
-		// 	for {
-		// 		rtpPacket, _, err := tr.ReadRTP()
-		// 		if err != nil {
-		// 			panic(err)
-		// 		}
-		// 		if err := oggwriter.WriteRTP(rtpPacket); err != nil {
-		// 			panic(err)
-		// 		}
-		// 	}
-		// }
 	})
 
 	Peer.OnICECandidate(func(c *webrtc.ICECandidate) {

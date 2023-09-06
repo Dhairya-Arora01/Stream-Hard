@@ -11,6 +11,7 @@ Live Streaming platform to broadcast live video to various social media platform
 - [ ] Cosmetic Frontend
 - [ ] Input for rtmp link
 - [x] Adding overlays
+- [ ] User Authentication
 - [ ] Concurrency in backend / error resillience
 - [ ] Docker containers for frontend and backend
 - [ ] Local k8s cluster setup

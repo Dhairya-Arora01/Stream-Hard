@@ -1,7 +1,7 @@
 <script setup>
     import { ref, onMounted } from 'vue';
 
-    const stream = ref(null)
+    const audioStream = ref(null)
     const localStream = ref(null)
     const combinedStream = ref(null)
     const name = ref("")
@@ -11,7 +11,7 @@
 
     async function startStream(){
         try {
-            stream.value = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            audioStream.value = await navigator.mediaDevices.getUserMedia({ audio: true })
             localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
             const canvas = document.createElement('canvas');
             canvas.width = localStream.value.getVideoTracks()[0].getSettings().width;
@@ -28,7 +28,8 @@
                 const textWidth = ctx.measureText(name.value)
                 ctx.fillText(name.value, (canvas.width-textWidth.width)/2, canvas.height-20)
             })
-            combinedStream.value = canvas.captureStream();
+            const canvasStream = canvas.captureStream()
+            combinedStream.value = new MediaStream([...audioStream.value.getTracks(), ...canvasStream.getTracks()])
         } catch (error) {
             console.error("Webcam not working", error)
         }
@@ -72,7 +73,7 @@
         <video :srcObject="localStream" id="videoPlayer" autoplay></video>
     </div>
     <div id="canvas" v-if="combinedStream !== null">
-        <video :srcObject="combinedStream" autoplay></video>
+        <video :srcObject="combinedStream" autoplay muted></video>
     </div>
     <div id="button">
         <button  v-on:click="startStream">Start</button>
