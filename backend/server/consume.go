@@ -51,8 +51,9 @@ func initialSetup() *webrtc.API {
 
 }
 
-func ffmpegSetup() io.WriteCloser {
-	ffmpegCmd := exec.Command("ffmpeg", "-re", "-i", "pipe:0", "-c:v", "libx264", "-preset", "veryfast", "-maxrate", "3000k", "-bufsize", "6000k", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "44100", "-f", "flv", "rtmp://del01.contribute.live-video.net/app/live_943332462_Qo6eS1TIvy8yoX6nSbjABUvRqtiee7")
+// Setup and execution for the ffmpeg command.
+func ffmpegSetup(rtmpLink string) io.WriteCloser {
+	ffmpegCmd := exec.Command("ffmpeg", "-re", "-i", "pipe:0", "-c:v", "libx264", "-preset", "veryfast", "-maxrate", "3000k", "-bufsize", "6000k", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "44100", "-f", "flv", rtmpLink)
 
 	ffmpegIn, err := ffmpegCmd.StdinPipe()
 	if err != nil {

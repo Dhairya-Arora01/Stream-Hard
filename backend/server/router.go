@@ -56,8 +56,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	var client Client
 	api := initialSetup()
-	Peer, err := api.NewPeerConnection(webrtc.Configuration{
+	client.Peer, err = api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
 				URLs: []string{
@@ -71,14 +72,19 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	var ffmpegIn io.WriteCloser
-	var ivfWriter *ivfwriter.IVFWriter
+	var (
+		ffmpegIn  io.WriteCloser
+		ivfWriter *ivfwriter.IVFWriter
+		candidate webrtc.ICECandidate
+		offer     webrtc.SessionDescription
+	)
 	// var oggWriter *oggwriter.OggWriter
 
-	Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
+	// Handling the incoming tracks
+	client.Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
 
 		if ffmpegIn == nil {
-			ffmpegIn = ffmpegSetup()
+			ffmpegIn = ffmpegSetup(client.RtmpLink.URL)
 		}
 		if ivfWriter == nil {
 			ivfWriter, err = ivfwriter.NewWith(ffmpegIn)
@@ -96,7 +102,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			ticker := time.NewTicker(time.Second * 1)
 			for range ticker.C {
-				rtcpSendErr := Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
+				rtcpSendErr := client.Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
 				if rtcpSendErr != nil {
 					fmt.Println(rtcpSendErr)
 				}
@@ -104,28 +110,27 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		log.Printf("Track has started stream %s, id: %s, rid: %s, kind: %s", tr.StreamID(), tr.ID(), tr.RID(), tr.Kind())
-		if tr.Kind().String() == "video" {
-			for {
-				rtpPacket, _, err := tr.ReadRTP()
-				if err != nil {
+		for {
+			rtpPacket, _, err := tr.ReadRTP()
+			if err != nil {
+				panic(err)
+			}
+			// writing the video packet using ivfwriter.
+			if rtpPacket.PayloadType == 96 {
+				if err := ivfWriter.WriteRTP(rtpPacket); err != nil {
 					panic(err)
 				}
-				if rtpPacket.PayloadType == 96 {
-					if err := ivfWriter.WriteRTP(rtpPacket); err != nil {
-						panic(err)
-					}
-				}
-				// if rtpPacket.PayloadType == 111 {
-				// 	if err := oggWriter.WriteRTP(rtpPacket); err != nil {
-				// 		panic(err)
-				// 	}
-				// }
 			}
+			// if rtpPacket.PayloadType == 111 {
+			// 	if err := oggWriter.WriteRTP(rtpPacket); err != nil {
+			// 		panic(err)
+			// 	}
+			// }
 		}
 	})
 
-	Peer.OnICECandidate(func(c *webrtc.ICECandidate) {
-		fmt.Println(c)
+	// Exchanging the ICECandidates
+	client.Peer.OnICECandidate(func(c *webrtc.ICECandidate) {
 		if c == nil {
 			return
 		}
@@ -138,14 +143,12 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	Peer.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+	client.Peer.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
 	})
 
-	var (
-		candidate webrtc.ICECandidate
-		offer     webrtc.SessionDescription
-	)
+	var rtmpLink RTMPLink
+
 	for {
 
 		_, p, err := conn.ReadMessage()
@@ -155,30 +158,38 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		switch {
 		// if the message is an offer set it as remote description and send the answer.
+		// Also set the answer as local description
 		case json.Unmarshal(p, &offer) == nil && offer.SDP != "":
-			if err := Peer.SetRemoteDescription(offer); err != nil {
+			if err := client.Peer.SetRemoteDescription(offer); err != nil {
 				panic(err)
 			}
 
-			answer, answererr := Peer.CreateAnswer(nil)
+			answer, answererr := client.Peer.CreateAnswer(nil)
 			if answererr != nil {
 				panic(answererr)
 			}
 
-			if err = Peer.SetLocalDescription(answer); err != nil {
+			if err = client.Peer.SetLocalDescription(answer); err != nil {
 				panic(err)
 			}
 
 			if err = conn.WriteJSON(answer); err != nil {
 				panic(err)
 			}
+		// if the message is an RTMPLink.
+		case json.Unmarshal(p, &rtmpLink) == nil && rtmpLink.URL != "":
+			if err = rtmpLink.isValid(); err != nil {
+				panic(err)
+			}
+			client.RtmpLink.URL = rtmpLink.URL
+			log.Println(rtmpLink.URL)
+
 		// if the message is an ICECandidate, add it.
 		case json.Unmarshal(p, &candidate) == nil && candidate.ToJSON().Candidate != "":
-			if err = Peer.AddICECandidate(candidate.ToJSON()); err != nil {
+			if err = client.Peer.AddICECandidate(candidate.ToJSON()); err != nil {
 				panic(err)
 			}
 		}
-
 	}
 
 }

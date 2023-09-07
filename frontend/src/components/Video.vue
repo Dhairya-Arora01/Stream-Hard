@@ -4,6 +4,7 @@
     const audioStream = ref(null)
     const localStream = ref(null)
     const combinedStream = ref(null)
+    const rtmpLink = ref("")
     const name = ref("")
     const overlay = ref("one")
     const color = ref("#220391")
@@ -14,9 +15,10 @@
             audioStream.value = await navigator.mediaDevices.getUserMedia({ audio: true })
             localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
             const canvas = document.createElement('canvas');
-            canvas.width = localStream.value.getVideoTracks()[0].getSettings().width;
-            canvas.height = localStream.value.getVideoTracks()[0].getSettings().height;
-            const ctx = canvas.getContext('2d');
+            canvas.width = localStream.value.getVideoTracks()[0].getSettings().width
+            canvas.height = localStream.value.getVideoTracks()[0].getSettings().height
+            const ctx = canvas.getContext('2d')
+
             window.setInterval(()=>{
                 ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
                 if (overlay.value == "two"){
@@ -58,6 +60,7 @@
         }
 
         socket.onopen = ()=>{
+            socket.send(JSON.stringify({rtmp: rtmpLink.value}))
             peer.createOffer().then(offer => {
                 peer.setLocalDescription(offer)
                 socket.send(JSON.stringify(offer))
@@ -77,6 +80,10 @@
     </div>
     <div id="button">
         <button  v-on:click="startStream">Start</button>
+    </div>
+    <div id="rtmp-link">
+        <label for="rtmp-link">rtmp:</label>
+        <input type="text" id="rtmp-link" v-model="rtmpLink">
     </div>
     <div id="getname">
         <label for="name">Text on Overlay:</label>

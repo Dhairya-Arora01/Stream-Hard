@@ -6,10 +6,10 @@ Live Streaming platform to broadcast live video to various social media platform
 - [x] Go basic
 - [x] WebRTC connection between browser and server
 - [x] Send webcam video to server using webRTC
-- [ ] Send audio to server using webRTC
+- [ ] Send audio to server using webRTC - x
 - [x] Streams transfer to rtmp using ffmpeg
 - [ ] Cosmetic Frontend
-- [ ] Input for rtmp link
+- [x] Input for rtmp link
 - [x] Adding overlays
 - [ ] User Authentication
 - [ ] Concurrency in backend / error resillience
