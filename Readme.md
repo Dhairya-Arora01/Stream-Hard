@@ -12,7 +12,7 @@ Live Streaming platform to broadcast live video to various social media platform
 - [x] Input for rtmp link
 - [x] Adding overlays
 - [ ] User Authentication
-- [ ] Concurrency in backend / error resillience
+- [x] Concurrency in backend / error resillience
 - [ ] Docker containers for frontend and backend
 - [ ] Local k8s cluster setup
 - [ ] IAC to setup the cluster in the cloud

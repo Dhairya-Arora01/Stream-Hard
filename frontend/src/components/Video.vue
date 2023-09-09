@@ -1,6 +1,8 @@
 <script setup>
     import { ref, onMounted } from 'vue';
 
+    const socket = ref(null)
+    const peer = ref(null)
     const audioStream = ref(null)
     const localStream = ref(null)
     const combinedStream = ref(null)
@@ -40,38 +42,44 @@
             console.error("Webcam not working", error)
         }
 
-        const socket = new WebSocket("ws://localhost:8000/ws")
-        const peer = new RTCPeerConnection({
+        socket.value = new WebSocket("ws://localhost:8000/ws")
+        peer.value = new RTCPeerConnection({
             iceServers: [
                 {
                     urls: ["stun:stun1.l.google.com:19302"]
                 },
             ],
         })
-        combinedStream.value.getTracks().forEach(track => peer.addTrack(track, combinedStream.value));
+        combinedStream.value.getTracks().forEach(track => peer.value.addTrack(track, combinedStream.value));
 
-        socket.onmessage = e =>{
+        socket.value.onmessage = e =>{
             let msg = JSON.parse(e.data)
             if (!msg){
                 return console.log("failed to parse msg")
             }
 
             if (msg.candidate) {
-                peer.addIceCandidate(msg)
+                peer.value.addIceCandidate(msg)
             } else if (msg.type){
-                peer.setRemoteDescription(msg)
+                peer.value.setRemoteDescription(msg)
             }
         }
 
-        socket.onopen = ()=>{
-            socket.send(JSON.stringify({rtmp: rtmpLink.value}))
+        socket.value.onopen = ()=>{
+            socket.value.send(JSON.stringify({rtmp: rtmpLink.value}))
             active.value = true
-            peer.createOffer().then(offer => {
-                peer.setLocalDescription(offer)
-                socket.send(JSON.stringify(offer))
+            peer.value.createOffer().then(offer => {
+                peer.value.setLocalDescription(offer)
+                socket.value.send(JSON.stringify(offer))
             })
         }
         
+    }
+
+    async function endStream() {
+        peer.value.close()
+        socket.value.close()
+        active.value = false
     }
 
 </script>
@@ -85,7 +93,7 @@
     </div>
     <div id="button">
         <button  v-on:click="startStream" v-if="!active">Start</button>
-        <button v-if="active">Stop</button>
+        <button v-on:click="endStream" v-if="active">Stop</button>
     </div>
     <div id="rtmp-link">
         <label for="rtmp-link">rtmp:</label>

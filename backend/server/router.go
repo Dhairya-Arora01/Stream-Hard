@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -69,11 +70,12 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		ICECandidatePoolSize: 10,
 	})
 	if err != nil {
-		fmt.Println(err)
+		return
 	}
 
 	var (
 		ffmpegIn  io.WriteCloser
+		ffmpegCmd *exec.Cmd
 		ivfWriter *ivfwriter.IVFWriter
 		candidate webrtc.ICECandidate
 		offer     webrtc.SessionDescription
@@ -82,17 +84,22 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	rtmpChan := make(chan string)
 	// var oggWriter *oggwriter.OggWriter
 
+	defer closeAndExit(client, ffmpegIn, ffmpegCmd)
+
 	// Handling the incoming tracks
 	client.Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
 
 		if ffmpegIn == nil {
 			client.RtmpLink.URL = <-rtmpChan
-			ffmpegIn = ffmpegSetup(client.RtmpLink.URL)
+			ffmpegIn, ffmpegCmd, err = ffmpegSetup(client.RtmpLink.URL)
+			if err != nil {
+				return
+			}
 		}
 		if ivfWriter == nil {
 			ivfWriter, err = ivfwriter.NewWith(ffmpegIn)
 			if err != nil {
-				panic(err)
+				return
 			}
 		}
 		// if oggWriter == nil {
@@ -107,7 +114,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			for range ticker.C {
 				rtcpSendErr := client.Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
 				if rtcpSendErr != nil {
-					fmt.Println(rtcpSendErr)
+					return
 				}
 			}
 		}()
@@ -116,12 +123,12 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		for {
 			rtpPacket, _, err := tr.ReadRTP()
 			if err != nil {
-				panic(err)
+				return
 			}
 			// writing the video packet using ivfwriter.
 			if rtpPacket.PayloadType == 96 {
 				if err := ivfWriter.WriteRTP(rtpPacket); err != nil {
-					panic(err)
+					return
 				}
 			}
 			// if rtpPacket.PayloadType == 111 {
@@ -139,10 +146,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 		outbound, marshalErr := json.Marshal(c.ToJSON())
 		if marshalErr != nil {
-			panic(marshalErr)
+			return
 		}
 		if err := conn.WriteMessage(websocket.TextMessage, outbound); err != nil {
-			panic(err)
+			return
 		}
 	})
 
@@ -156,7 +163,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		_, p, err := conn.ReadMessage()
 		if err != nil {
-			panic(err)
+			closeAndExit(client, ffmpegIn, ffmpegCmd)
+			return
 		}
 
 		switch {
@@ -164,25 +172,25 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		// Also set the answer as local description
 		case json.Unmarshal(p, &offer) == nil && offer.SDP != "":
 			if err := client.Peer.SetRemoteDescription(offer); err != nil {
-				panic(err)
+				return
 			}
 
 			answer, answererr := client.Peer.CreateAnswer(nil)
 			if answererr != nil {
-				panic(answererr)
+				return
 			}
 
 			if err = client.Peer.SetLocalDescription(answer); err != nil {
-				panic(err)
+				return
 			}
 
 			if err = conn.WriteJSON(answer); err != nil {
-				panic(err)
+				return
 			}
 		// if the message is an RTMPLink.
 		case json.Unmarshal(p, &rtmpLink) == nil && rtmpLink.URL != "":
 			if err = rtmpLink.isValid(); err != nil {
-				panic(err)
+				return
 			}
 			go func() {
 				rtmpChan <- rtmpLink.URL
@@ -192,15 +200,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		// if the message is an ICECandidate, add it.
 		case json.Unmarshal(p, &candidate) == nil && candidate.ToJSON().Candidate != "":
 			if err = client.Peer.AddICECandidate(candidate.ToJSON()); err != nil {
-				panic(err)
+				return
 			}
 		}
 	}
 
-}
-
-func responseErrorHandling(err error, msg string) {
-	if err != nil {
-		log.Fatalln(msg, err)
-	}
 }
