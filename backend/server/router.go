@@ -78,12 +78,15 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		candidate webrtc.ICECandidate
 		offer     webrtc.SessionDescription
 	)
+
+	rtmpChan := make(chan string)
 	// var oggWriter *oggwriter.OggWriter
 
 	// Handling the incoming tracks
 	client.Peer.OnTrack(func(tr *webrtc.TrackRemote, rtpr *webrtc.RTPReceiver) {
 
 		if ffmpegIn == nil {
+			client.RtmpLink.URL = <-rtmpChan
 			ffmpegIn = ffmpegSetup(client.RtmpLink.URL)
 		}
 		if ivfWriter == nil {
@@ -100,7 +103,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		// }
 
 		go func() {
-			ticker := time.NewTicker(time.Second * 1)
+			ticker := time.NewTicker(time.Second * 3)
 			for range ticker.C {
 				rtcpSendErr := client.Peer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(tr.SSRC())}})
 				if rtcpSendErr != nil {
@@ -181,8 +184,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			if err = rtmpLink.isValid(); err != nil {
 				panic(err)
 			}
-			client.RtmpLink.URL = rtmpLink.URL
-			log.Println(rtmpLink.URL)
+			go func() {
+				rtmpChan <- rtmpLink.URL
+				close(rtmpChan)
+			}()
 
 		// if the message is an ICECandidate, add it.
 		case json.Unmarshal(p, &candidate) == nil && candidate.ToJSON().Candidate != "":

@@ -9,11 +9,13 @@
     const overlay = ref("one")
     const color = ref("#220391")
     const textColor = ref("#f3f2f5")
+    const active = ref(false)
 
     async function startStream(){
-        try {
+        try {           
             audioStream.value = await navigator.mediaDevices.getUserMedia({ audio: true })
             localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
+
             const canvas = document.createElement('canvas');
             canvas.width = localStream.value.getVideoTracks()[0].getSettings().width
             canvas.height = localStream.value.getVideoTracks()[0].getSettings().height
@@ -30,8 +32,10 @@
                 const textWidth = ctx.measureText(name.value)
                 ctx.fillText(name.value, (canvas.width-textWidth.width)/2, canvas.height-20)
             })
+
             const canvasStream = canvas.captureStream()
             combinedStream.value = new MediaStream([...audioStream.value.getTracks(), ...canvasStream.getTracks()])
+
         } catch (error) {
             console.error("Webcam not working", error)
         }
@@ -61,6 +65,7 @@
 
         socket.onopen = ()=>{
             socket.send(JSON.stringify({rtmp: rtmpLink.value}))
+            active.value = true
             peer.createOffer().then(offer => {
                 peer.setLocalDescription(offer)
                 socket.send(JSON.stringify(offer))
@@ -79,7 +84,8 @@
         <video :srcObject="combinedStream" autoplay muted></video>
     </div>
     <div id="button">
-        <button  v-on:click="startStream">Start</button>
+        <button  v-on:click="startStream" v-if="!active">Start</button>
+        <button v-if="active">Stop</button>
     </div>
     <div id="rtmp-link">
         <label for="rtmp-link">rtmp:</label>
