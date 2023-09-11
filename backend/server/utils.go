@@ -19,14 +19,24 @@ type RTMPLink struct {
 	URL string `json:"rtmp"`
 }
 
-func (rl *RTMPLink) isValid() error {
-	pref := rl.URL[:7]
-	if pref != "rtmp://" {
-		return errors.New("invalid RTMP link")
-	}
-	return nil
+type RTMPError struct {
+	Message string `json:"RTMPError"`
 }
 
+// isValid Validates the RTMP link.
+func (rl *RTMPLink) isValid() error {
+	if len(rl.URL) > 7 {
+
+		pref := rl.URL[:7]
+		if pref != "rtmp://" {
+			return errors.New("invalid RTMP link")
+		}
+		return nil
+	}
+	return errors.New("invalid RTMP link")
+}
+
+// closeAndExit closes the connection, ffmpeg stdin and kills the ffmpeg command
 func closeAndExit(client Client, ffmpegIn io.WriteCloser, ffmpegCmd *exec.Cmd) {
 	if client.Peer != nil {
 		if err := client.Peer.Close(); err != nil {

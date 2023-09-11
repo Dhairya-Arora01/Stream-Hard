@@ -1,5 +1,6 @@
 <script setup>
     import { ref, onMounted } from 'vue';
+import router from '../router';
 
     const socket = ref(null)
     const peer = ref(null)
@@ -14,7 +15,13 @@
     const active = ref(false)
 
     async function startStream(){
-        try {           
+        const token = localStorage.getItem("token")
+
+        if (token == null) {
+            router.replace('/login')
+        }
+
+        try {     
             audioStream.value = await navigator.mediaDevices.getUserMedia({ audio: true })
             localStream.value = await navigator.mediaDevices.getUserMedia({ video: true })
 
@@ -41,8 +48,12 @@
         } catch (error) {
             console.error("Webcam not working", error)
         }
+        
+        socket.value = new WebSocket("ws://localhost:8000/ws?bearer=" + token)
+        socket.value.onerror = e => {
+            console.error("Error opening websocket returning you back!")
+        }
 
-        socket.value = new WebSocket("ws://localhost:8000/ws")
         peer.value = new RTCPeerConnection({
             iceServers: [
                 {
@@ -62,6 +73,9 @@
                 peer.value.addIceCandidate(msg)
             } else if (msg.type){
                 peer.value.setRemoteDescription(msg)
+            } else if (msg.RTMPError){
+                console.log(msg.RTMPError)
+                endStream()
             }
         }
 
@@ -72,6 +86,10 @@
                 peer.value.setLocalDescription(offer)
                 socket.value.send(JSON.stringify(offer))
             })
+        }
+
+        socket.value.onclose = ()=> {
+            endStream()
         }
         
     }

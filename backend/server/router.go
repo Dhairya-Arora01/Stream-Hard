@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/Dhairya-Arora01/StreamHard/server/auth"
+	"github.com/Dhairya-Arora01/StreamHard/server/db"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -22,7 +24,9 @@ func CreateRoutes(port string) {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/hello", sayHello).Methods("GET")
-	router.HandleFunc("/ws", ws)
+	router.HandleFunc("/signup", handleSignup).Methods("POST")
+	router.HandleFunc("/login", handleLogin).Methods("POST")
+	router.HandleFunc("/ws", auth.AuthMiddleware(ws))
 
 	http.Handle("/", router)
 	log.Printf("Starting Server at localhost:8000")
@@ -50,6 +54,9 @@ var upgrader = websocket.Upgrader{
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
+
+	log.Println(r.Proto, r.Method, r.Host, r.RequestURI)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade failed: ", err)
@@ -190,6 +197,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		// if the message is an RTMPLink.
 		case json.Unmarshal(p, &rtmpLink) == nil && rtmpLink.URL != "":
 			if err = rtmpLink.isValid(); err != nil {
+				conn.WriteJSON(RTMPError{
+					Message: "Provided RTMP link is invalid",
+				})
 				return
 			}
 			go func() {
@@ -203,6 +213,89 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+
+}
+
+// SignUp request userfields.
+type requestUserSignup struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func handleSignup(w http.ResponseWriter, r *http.Request) {
+
+	log.Println(r.Proto, r.Method, r.Host, r.RequestURI)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read body", http.StatusBadRequest)
+	}
+
+	var reqUser requestUserSignup
+
+	err = json.Unmarshal(body, &reqUser)
+	if err != nil {
+		http.Error(w, "Failed to extract", http.StatusBadRequest)
+	} else {
+
+		if err := db.CreateUser(reqUser.Name, reqUser.Email, reqUser.Password); err != nil {
+			http.Error(w, "Failed to CreateUser", http.StatusBadRequest)
+		}
+
+		response := map[string]interface{}{
+			"message": "User created successfully",
+		}
+
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			log.Println("Unable to marshal the response to json")
+		} else {
+			w.Write(jsonResponse)
+		}
+	}
+}
+
+// Login request user fields
+type requestUserLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+
+	log.Println(r.Proto, r.Method, r.Host, r.RequestURI)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to extract", http.StatusBadRequest)
+		return
+	}
+
+	var reqUser requestUserLogin
+	err = json.Unmarshal(body, &reqUser)
+	if err != nil {
+		http.Error(w, "Failed to extract", http.StatusBadRequest)
+		return
+	}
+
+	name, token, err := db.LoginUser(reqUser.Email, reqUser.Password)
+	if err != nil {
+		http.Error(w, "Wrong Credentials", http.StatusUnauthorized)
+		return
+	}
+
+	response := map[string]interface{}{
+		"name":  name,
+		"token": token,
+	}
+
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.Println("Unable to marshal the response to json")
+	} else {
+		w.Write(jsonResponse)
 	}
 
 }
