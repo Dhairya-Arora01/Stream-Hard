@@ -8,7 +8,7 @@ Live Streaming platform to broadcast live video to various social media platform
 - [x] Send webcam video to server using webRTC
 - [ ] Send audio to server using webRTC - x
 - [x] Streams transfer to rtmp using ffmpeg
-- [ ] Cosmetic Frontend
+- [x] Cosmetic Frontend
 - [x] Input for rtmp link
 - [x] Adding overlays
 - [x] User Authentication

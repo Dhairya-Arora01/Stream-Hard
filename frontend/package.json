@@ -11,7 +11,8 @@
   "dependencies": {
     "vue": "^3.3.4",
     "vue-router": "^4.2.4",
-    "vue-webrtc": "^3.0.1"
+    "vue-webrtc": "^3.0.1",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
