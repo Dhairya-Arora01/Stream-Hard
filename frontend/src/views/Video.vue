@@ -56,6 +56,7 @@
             combinedStream.value = new MediaStream([...audioStream.value.getTracks(), ...canvasStream.getTracks()])
 
         } catch (error) {
+            store.commit("funcErr", "Webcam not working!")
             console.error("Webcam not working", error)
         }
         
@@ -85,6 +86,7 @@
                 peer.value.setRemoteDescription(msg)
             } else if (msg.RTMPError){
                 console.log(msg.RTMPError)
+                store.commit("funcErr", msg.RTMPError)
                 endStream()
             }
         }
@@ -99,6 +101,7 @@
         }
 
         socket.value.onclose = ()=> {
+            store.commit("funcErr", "Stream Ended!")
             endStream()
         }
         

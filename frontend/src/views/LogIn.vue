@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import router from '../router';
+import store from '../store';
 
 const email = ref("")
 const password = ref("")
@@ -25,7 +26,7 @@ async function submitForm() {
             localStorage.setItem("name", res["name"])
             router.replace("/home")
         } else {
-            console.log("Error occured")
+            store.commit("funcErr", "Invalid Credentials!")
             resetCredentials()
         }
 

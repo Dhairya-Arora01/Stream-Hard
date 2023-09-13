@@ -1,7 +1,12 @@
 <script>
 
+import Error from './views/Error.vue';
+
 export default {
   name: 'App',
+  components: {
+    Error,
+  }
 }
 
 </script>
@@ -11,6 +16,7 @@ export default {
   <div id="title">
     <h1>StreamHard</h1>
   </div>
+  <error></error>
   <div id="content">
     <router-view></router-view>
   </div>

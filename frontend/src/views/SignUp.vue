@@ -26,7 +26,7 @@ async function submitForm(){
             console.log(res)
             router.replace("/login")
         } else {
-            console.log("Error occured")
+            store.commit("funcErr", "User already exists")
             resetCredentials()
         }
 
