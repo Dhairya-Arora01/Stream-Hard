@@ -13,7 +13,7 @@ Live Streaming platform to broadcast live video to various social media platform
 - [x] Adding overlays
 - [x] User Authentication
 - [x] Concurrency in backend / error resillience
-- [ ] Docker containers for frontend and backend
+- [x] Implementing Docker
 - [ ] Local k8s cluster setup
 - [ ] IAC to setup the cluster in the cloud
 - [ ] Unit and e2e testing

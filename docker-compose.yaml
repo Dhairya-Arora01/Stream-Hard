@@ -1,0 +1,31 @@
+services:
+  proxy:
+    image: dhairyarora0208/streamhard-frontend
+    ports:
+      - "8080:80"
+    
+  backend:
+    image: dhairyarora0208/streamhard-backend
+    env_file:
+      - ./backend/backend.env
+    ports:
+      - "8000:8000"
+    networks:
+      - streamhard-net2
+    depends_on:
+      - database
+  
+  database:
+    image: postgres:alpine
+    container_name: mypostgres
+    environment:
+      - POSTGRES_PASSWORD=password
+    networks:
+      - streamhard-net2
+    volumes:
+      - "database-volume:/var/lib/postgresql/data"
+
+networks:
+  streamhard-net2:
+volumes:
+  database-volume:

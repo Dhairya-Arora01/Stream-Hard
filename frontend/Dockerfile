@@ -1,12 +1,19 @@
-# Build it from outside frontend folder i.e. inside StreamHard.
-FROM node:20-alpine
+FROM node:20-alpine as build
 
 WORKDIR /StreamHard/frontend
 
-COPY . .
+COPY package.json .
 
 RUN npm install
 
-EXPOSE 5173
+COPY . .
 
-CMD [ "npm", "run", "dev", "--", "--host" ]
+RUN npm run build
+
+FROM nginx:stable-alpine
+
+COPY --from=build /StreamHard/frontend/dist  /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD [ "nginx", "-g", "daemon off;" ]
