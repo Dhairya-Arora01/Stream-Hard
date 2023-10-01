@@ -2,6 +2,7 @@ package auth
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -24,7 +25,7 @@ func GenerateToken(uid int) string {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte("saini72"))
+	tokenString, err := token.SignedString([]byte(os.Getenv("SIGNINGSECRET")))
 
 	if err != nil {
 		log.Println("Error while signing the token:", err)
