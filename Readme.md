@@ -10,7 +10,7 @@ Live Streaming platform to broadcast live video to various social media platform
 - [x] Streams transfer to rtmp using ffmpeg
 - [x] Cosmetic Frontend
 - [x] Input for rtmp link
-- [x] Adding overlays
+- [x] Adding overlays to the stream
 - [x] User Authentication
 - [x] Concurrency in backend / error resillience
 - [x] Implementing Docker
