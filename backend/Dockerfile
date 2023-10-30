@@ -9,6 +9,8 @@ COPY . .
 
 RUN go mod tidy
 
+RUN go build main.go
+
 EXPOSE 8000
 
-CMD ["go", "run", "main.go" ]
+CMD [ "./main" ]
