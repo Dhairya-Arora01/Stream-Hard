@@ -1,5 +1,13 @@
 # Stream-Hard
-Live Streaming platform to broadcast live video to various social media platforms.<hr>
+A live streaming platform to broadcast live video from your browser to various social media platforms.<hr>
+
+## Features
+- ⚡ Live stream your webcam video from your browser to social media platforms.
+- 🫂 User friendly web-interface.
+- 🔐 Authentication for clients.
+- ✨ Add overlays to your stream.
+- 🙌 Supports all platforms that allows streaming through an rtmp link.
+- 🚫 We do not store your rtmp links and keys.
 
 ## Checklist
 - [x] Vue basic
