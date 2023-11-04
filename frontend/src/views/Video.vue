@@ -1,6 +1,7 @@
 <script setup>
     import { ref, onMounted } from 'vue';
     import router from '../router';
+    import store from '../store';
 
     const socket = ref(null)
     const peer = ref(null)
