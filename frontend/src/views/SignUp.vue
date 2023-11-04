@@ -9,7 +9,7 @@ const password = ref("")
 
 async function submitForm(){
     try {
-        const req = await fetch("http://localhost:8000/signup", {
+        const req = await fetch("http://192.168.49.2:31768/signup", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

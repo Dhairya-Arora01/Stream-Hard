@@ -8,7 +8,7 @@ const password = ref("")
 
 async function submitForm() {
     try {
-        const req = await fetch("http://localhost:8000/login", {
+        const req = await fetch("http://192.168.49.2:31768/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

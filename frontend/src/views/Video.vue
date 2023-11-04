@@ -60,7 +60,7 @@
             console.error("Webcam not working", error)
         }
         
-        socket.value = new WebSocket("ws://localhost:8000/ws?bearer=" + token)
+        socket.value = new WebSocket("ws://192.168.49.2:31768/ws?bearer=" + token)
         socket.value.onerror = e => {
             console.error("Error opening websocket returning you back!")
         }
@@ -68,7 +68,9 @@
         peer.value = new RTCPeerConnection({
             iceServers: [
                 {
-                    urls: ["stun:stun1.l.google.com:19302"]
+                    url: 'turn:192.168.49.2:31032',
+                    username: 'user-1',
+                    credential: 'pass-1'
                 },
             ],
         })
